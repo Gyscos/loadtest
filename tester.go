@@ -104,6 +104,10 @@ func (t *Tester) showStats(times []time.Duration) {
 	for _, t := range times {
 		variance += (t - avg) * (t - avg)
 	}
+	if variance < 0 {
+		panic("Negative variance???")
+	}
+	variance = variance / time.Duration(len(times))
 	stdDev := time.Duration(math.Sqrt(float64(variance)))
 
 	fmt.Fprintln(t.w, "Average time:", avg)
