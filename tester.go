@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math"
@@ -15,13 +17,15 @@ type Tester struct {
 	fileName string
 	callRate int
 	host     string
+	w        io.Writer
 }
 
-func NewTester(host string, dataFileName string, callRate int) *Tester {
+func NewTester(host string, dataFileName string, callRate int, w io.Writer) *Tester {
 	return &Tester{
 		fileName: dataFileName,
 		callRate: callRate,
 		host:     host,
+		w:        w,
 	}
 }
 
@@ -48,7 +52,7 @@ func (t *Tester) Test(sc <-chan os.Signal) error {
 	if err != nil {
 		return err
 	}
-	go handleErrors(ec, &handlerGroup)
+	go t.handleErrors(ec, &handlerGroup)
 	go storeTimes(tc, &times, &handlerGroup)
 
 	// Now read from this channel
@@ -70,14 +74,14 @@ Loop:
 	handlerGroup.Wait()
 
 	// Now show stats
-	showStats(times)
+	t.showStats(times)
 
 	return nil
 }
 
-func showStats(times []time.Duration) {
+func (t *Tester) showStats(times []time.Duration) {
 	if len(times) == 0 {
-		log.Println("No times reported.")
+		fmt.Fprintln(t.w, "No times reported.")
 		return
 	}
 	avg := 0 * time.Second
@@ -100,12 +104,12 @@ func showStats(times []time.Duration) {
 	}
 	stdDev := time.Duration(math.Sqrt(float64(variance)))
 
-	log.Println("Average time:", avg)
-	log.Println("Min,max:", min, max)
-	log.Println("Stddev:", stdDev)
+	fmt.Fprintln(t.w, "Average time:", avg)
+	fmt.Fprintln(t.w, "Min,max:", min, max)
+	fmt.Fprintln(t.w, "Stddev:", stdDev)
 }
 
-func handleErrors(ec <-chan error, wg *sync.WaitGroup) {
+func (t *Tester) handleErrors(ec <-chan error, wg *sync.WaitGroup) {
 	for err := range ec {
 		log.Println("Error:", err)
 	}
@@ -133,7 +137,7 @@ func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal
 
 		for scanner.Scan() {
 			line := scanner.Text()
-			// log.Println("Adding", line)
+			log.Println("Adding", line)
 			select {
 			case <-sc:
 				log.Println("Stopped reading file.")
