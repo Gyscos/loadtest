@@ -13,11 +13,13 @@ func main() {
 	var callRate int
 	var host string
 	var output string
+	var maxQueries int
 
 	flag.StringVar(&output, "o", "", "Output file. Leave blank for stdout.")
 	flag.StringVar(&host, "h", "http://localhost:8080", "Host base URL")
 	flag.StringVar(&dataFileName, "f", "data.txt", "Data file containing list of paths to call")
 	flag.IntVar(&callRate, "r", 60, "Call rate: number of calls per minute")
+	flag.IntVar(&maxQueries, "max", 0, "Maximum number of queries to call. 0 for unlimited.")
 	flag.Parse()
 
 	var w io.Writer
@@ -35,7 +37,7 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	tester := NewTester(host, dataFileName, callRate, w)
+	tester := NewTester(host, dataFileName, callRate, maxQueries, w)
 	err := tester.Test(c)
 	if err != nil {
 		log.Println("Error occured:", err)

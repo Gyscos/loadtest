@@ -14,18 +14,20 @@ import (
 )
 
 type Tester struct {
-	fileName string
-	callRate int
-	host     string
-	w        io.Writer
+	fileName   string
+	callRate   int
+	maxQueries int
+	host       string
+	w          io.Writer
 }
 
-func NewTester(host string, dataFileName string, callRate int, w io.Writer) *Tester {
+func NewTester(host string, dataFileName string, callRate int, maxQueries int, w io.Writer) *Tester {
 	return &Tester{
-		fileName: dataFileName,
-		callRate: callRate,
-		host:     host,
-		w:        w,
+		fileName:   dataFileName,
+		callRate:   callRate,
+		maxQueries: maxQueries,
+		host:       host,
+		w:          w,
 	}
 }
 
@@ -144,6 +146,13 @@ func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal
 				ac <- struct{}{}
 				return
 			case rc <- line:
+				if t.maxQueries > 0 {
+					if t.maxQueries == 1 {
+						return
+					} else {
+						t.maxQueries--
+					}
+				}
 			}
 		}
 
