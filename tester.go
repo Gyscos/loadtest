@@ -34,6 +34,8 @@ func NewTester(host string, dataFileName string, callRate int, maxQueries int, w
 func (t *Tester) Test(sc <-chan os.Signal) error {
 	// sc is the Signal Channel ^^^
 
+	fmt.Fprintln(t.w, "CallRate:", t.callRate)
+
 	// Request channel
 	rc := make(chan string, 20)
 	// Times channel
@@ -45,15 +47,16 @@ func (t *Tester) Test(sc <-chan os.Signal) error {
 
 	times := make([]time.Duration, 0)
 
-	var callGroup sync.WaitGroup
-	var handlerGroup sync.WaitGroup
-
 	// Pipe the file into the channel
-	handlerGroup.Add(2)
 	err := t.readFile(rc, ec, sc, ac)
 	if err != nil {
 		return err
 	}
+
+	var callGroup sync.WaitGroup
+	var handlerGroup sync.WaitGroup
+
+	handlerGroup.Add(2)
 	go t.handleErrors(ec, &handlerGroup)
 	go storeTimes(tc, &times, &handlerGroup)
 
@@ -74,6 +77,7 @@ Loop:
 	}
 	log.Println("All calls sent. Now waiting for them to complete...")
 	callGroup.Wait()
+	log.Println("All calls complete. Now closing channels and computing stats.")
 	close(ec)
 	close(tc)
 	handlerGroup.Wait()
@@ -123,17 +127,19 @@ func showStats(times []time.Duration, w io.Writer) {
 }
 
 func (t *Tester) handleErrors(ec <-chan error, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	for err := range ec {
 		log.Println("Error:", err)
 	}
-	wg.Done()
 }
 
 func storeTimes(tc <-chan time.Duration, times *[]time.Duration, wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	for t := range tc {
 		*times = append(*times, t)
 	}
-	wg.Done()
 }
 
 func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal, ac chan<- struct{}) error {
