@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
@@ -25,7 +26,8 @@ func main() {
 	flag.IntVar(&callRate, "r", 60, "Call rate: number of calls per minute")
 	flag.Parse()
 
-	if maxDuration != "" {
+	if maxDuration != "" && maxDuration != "0" {
+		fmt.Printf("[%v]", maxDuration)
 		dur, err := time.ParseDuration(maxDuration)
 		if err == nil {
 			maxQueries = int((time.Duration(callRate) * dur) / time.Minute)
