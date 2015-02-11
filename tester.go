@@ -84,7 +84,7 @@ Loop:
 
 	// Now show stats
 	nDropped := nCalls - len(times)
-	fmt.Fprintf(t.w, "Dropped %v of %v instances (%v %)\n", nDropped, nCalls, 100*nDropped/nCalls)
+	fmt.Fprintf(t.w, "Dropped %v of %v instances (%v %%)\n", nDropped, nCalls, 100*nDropped/nCalls)
 	showStats(times, t.w)
 
 	return nil
