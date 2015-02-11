@@ -59,10 +59,12 @@ func (t *Tester) Test(sc <-chan os.Signal) error {
 
 	// Now read from this channel
 	interval := time.Minute / time.Duration(t.callRate)
+	nCalls := 0
 Loop:
 	for url := range rc {
 		callGroup.Add(1)
 		go t.runCall(url, tc, ec, &callGroup)
+		nCalls++
 		select {
 		case <-ac:
 			break Loop
@@ -76,6 +78,8 @@ Loop:
 	handlerGroup.Wait()
 
 	// Now show stats
+	nDropped := nCalls - len(times)
+	fmt.Fprintf(t.w, "Dropped %v of %v instances (%v %)\n", nDropped, nCalls, 100*nDropped/nCalls)
 	showStats(times, t.w)
 
 	return nil
