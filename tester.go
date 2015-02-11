@@ -76,14 +76,14 @@ Loop:
 	handlerGroup.Wait()
 
 	// Now show stats
-	t.showStats(times)
+	showStats(times, t.w)
 
 	return nil
 }
 
-func (t *Tester) showStats(times []time.Duration) {
+func showStats(times []time.Duration, w io.Writer) {
 	if len(times) == 0 {
-		fmt.Fprintln(t.w, "No times reported.")
+		fmt.Fprintln(w, "No times reported.")
 		return
 	}
 	avg := 0 * time.Second
@@ -102,17 +102,19 @@ func (t *Tester) showStats(times []time.Duration) {
 
 	variance := 0 * time.Second
 	for _, t := range times {
-		variance += (t - avg) * (t - avg)
+		// Having squared nanoseconds may be a bit too high...
+		delta := (t - avg) / time.Millisecond
+		variance += delta * delta
 	}
 	if variance < 0 {
 		panic("Negative variance???")
 	}
 	variance = variance / time.Duration(len(times))
-	stdDev := time.Duration(math.Sqrt(float64(variance)))
+	stdDev := time.Duration(math.Sqrt(float64(variance))) * time.Millisecond
 
-	fmt.Fprintln(t.w, "Average time:", avg)
-	fmt.Fprintln(t.w, "Min,max:", min, max)
-	fmt.Fprintln(t.w, "Stddev:", stdDev)
+	fmt.Fprintln(w, "Average time:", avg)
+	fmt.Fprintln(w, "Min,max:", min, max)
+	fmt.Fprintln(w, "Stddev:", stdDev)
 }
 
 func (t *Tester) handleErrors(ec <-chan error, wg *sync.WaitGroup) {

@@ -18,11 +18,31 @@ func main() {
 	for scanner.Scan() {
 		line := scanner.Text()
 		path := getClearPath(line)
+		path = apifyPath(path)
+		if path == "" {
+			continue
+		}
 		if token != "" {
 			path = replaceToken(path, token)
 		}
 		fmt.Println(path)
 	}
+}
+
+func apifyPath(path string) string {
+	if strings.HasPrefix(path, "/api") {
+		return path
+	}
+
+	if strings.HasPrefix(path, "/v2") {
+		return "/api" + path[len("/v2"):] + "&version=2"
+	}
+
+	if strings.HasPrefix(path, "/v3") {
+		return "/api" + path[len("/v3"):] + "&version=3"
+	}
+
+	return ""
 }
 
 func replaceToken(path string, newToken string) string {
