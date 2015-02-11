@@ -63,6 +63,7 @@ func (t *Tester) Test(sc <-chan os.Signal) error {
 Loop:
 	for url := range rc {
 		callGroup.Add(1)
+		log.Println("Calling", url)
 		go t.runCall(url, tc, ec, &callGroup)
 		nCalls++
 		select {
@@ -149,7 +150,6 @@ func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal
 
 		for scanner.Scan() {
 			line := scanner.Text()
-			log.Println("Adding", line)
 			select {
 			case <-sc:
 				log.Println("Stopped reading file.")
