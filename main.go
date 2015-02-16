@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -19,7 +18,7 @@ func main() {
 	var maxDuration string
 
 	flag.StringVar(&output, "o", "", "Output file. Leave blank for stdout.")
-	flag.StringVar(&host, "h", "http://localhost:8080", "Host base URL")
+	flag.StringVar(&host, "host", "http://localhost:8080", "Host base URL")
 	flag.StringVar(&dataFileName, "f", "data.txt", "Data file containing list of paths to call")
 	flag.StringVar(&maxDuration, "maxT", "", "Maximum duration for the test. Leave blank to use maxQ instead.")
 	flag.IntVar(&maxQueries, "maxQ", 0, "Maximum number of queries to call. 0 for unlimited.")
@@ -27,7 +26,6 @@ func main() {
 	flag.Parse()
 
 	if maxDuration != "" && maxDuration != "0" {
-		fmt.Printf("[%v]", maxDuration)
 		dur, err := time.ParseDuration(maxDuration)
 		if err == nil {
 			maxQueries = int((time.Duration(callRate) * dur) / time.Minute)
