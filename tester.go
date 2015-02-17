@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/Gyscos/urlspammer"
 )
 
 type Tester struct {
@@ -30,6 +30,13 @@ func NewTester(host string, dataFileName string, callRate int, maxQueries int, w
 	}
 }
 
+func (t *Tester) addHost(output chan<- string, input <-chan string) {
+	for path := range input {
+		output <- t.host + path
+	}
+	close(output)
+}
+
 func (t *Tester) Test(sc <-chan os.Signal) error {
 	// sc is the Signal Channel ^^^
 
@@ -47,35 +54,28 @@ func (t *Tester) Test(sc <-chan os.Signal) error {
 	times := make([]time.Duration, 0)
 
 	// Pipe the file into the channel
-	err := t.readFile(rc, ec, sc, ac)
+	nCalls := 0
+	err := t.readFile(rc, ec, sc, ac, &nCalls)
 	if err != nil {
 		return err
 	}
+	// Url Channel
+	uc := make(chan string, 5)
+	go t.addHost(uc, rc)
 
-	var callGroup sync.WaitGroup
 	var handlerGroup sync.WaitGroup
 
 	handlerGroup.Add(2)
+	// Log errors from ec
 	go t.handleErrors(ec, &handlerGroup)
+	// Store input from tc into times
 	go storeTimes(tc, &times, &handlerGroup)
 
-	// Now read from this channel
-	interval := time.Minute / time.Duration(t.callRate)
-	nCalls := 0
-Loop:
-	for url := range rc {
-		callGroup.Add(1)
-		log.Println("Calling", url)
-		go t.runCall(url, tc, ec, &callGroup)
-		nCalls++
-		select {
-		case <-ac:
-			break Loop
-		case <-time.After(interval):
-		}
-	}
-	log.Println("All calls sent. Now waiting for them to complete...")
-	callGroup.Wait()
+	urlspammer.SpamByRate(t.callRate, urlspammer.WrapUrls(uc), func(q urlspammer.Query, body []byte, d time.Duration) {
+		// Called on each successful query
+		log.Printf("[%v] %v\n", d, q.Url)
+		tc <- d
+	})
 	log.Println("All calls complete. Now closing channels and computing stats.")
 	close(ec)
 	close(tc)
@@ -105,7 +105,9 @@ func storeTimes(tc <-chan time.Duration, times *[]time.Duration, wg *sync.WaitGr
 	}
 }
 
-func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal, ac chan<- struct{}) error {
+// Read a file and push urls to the channel.
+// When a signal is caught, stop, and send somehting along ac, the AbortChannel
+func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal, ac chan<- struct{}, nCalls *int) error {
 
 	file, err := os.Open(t.fileName)
 	if err != nil {
@@ -125,6 +127,7 @@ func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal
 				ac <- struct{}{}
 				return
 			case rc <- line:
+				(*nCalls)++
 				if t.maxQueries > 0 {
 					if t.maxQueries == 1 {
 						return
@@ -141,23 +144,4 @@ func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal
 		}
 	}()
 	return nil
-}
-
-func (t *Tester) runCall(url string, tc chan<- time.Duration, ec chan<- error, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	start := time.Now()
-	resp, err := http.Get(t.host + url)
-	if err != nil {
-		// Error during call?...
-		ec <- err
-		return
-	}
-	_, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		ec <- err
-		return
-	}
-
-	tc <- time.Since(start)
 }

@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/signal"
 	"time"
 )
 
@@ -45,7 +44,7 @@ func main() {
 	}
 
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	// signal.Notify(c, os.Interrupt)
 
 	tester := NewTester(host, dataFileName, callRate, maxQueries, w)
 	err := tester.Test(c)
