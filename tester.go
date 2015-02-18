@@ -128,13 +128,13 @@ func (t *Tester) readFile(rc chan<- string, ec chan<- error, sc <-chan os.Signal
 				return
 			case rc <- line:
 				(*nCalls)++
-				if t.maxQueries > 0 {
-					if t.maxQueries == 1 {
-						return
-					} else {
-						t.maxQueries--
-					}
+				if t.maxQueries == 0 {
+					break
 				}
+				if t.maxQueries == 1 {
+					return
+				}
+				t.maxQueries--
 			}
 		}
 
