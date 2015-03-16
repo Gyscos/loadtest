@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// Find the requested URL in nginx logs, and change the tokens with a fixed one.
 func main() {
 	var token string
 	flag.StringVar(&token, "t", "", "Token to enforce. Leave empty to keep original token.")
@@ -58,6 +59,9 @@ func replaceToken(path string, newToken string) string {
 }
 
 func getClearPath(line string) string {
+	if strings.HasPrefix(line, "/") {
+		return line
+	}
 	array := strings.Split(line, " ")
 	path := ""
 	for i, work := range array {
